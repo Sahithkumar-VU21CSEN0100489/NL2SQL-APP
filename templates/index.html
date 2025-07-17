@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NL2SQL Web App</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        textarea { width: 100%; height: 80px; }
+        table, th, td { border: 1px solid black; border-collapse: collapse; padding: 6px; }
+    </style>
+</head>
+<body>
+    <h2>NL2SQL Web Application</h2>
+    <form method="post" style="display: flex; align-items: center; gap: 10px;">
+        <label>Question:</label>
+        <input type="text" name="question" style="width:100%;" required value="{{ request.form.get('question', '') }}">
+        <button type="submit">Submit</button>
+    </form>
+    {% if answer %}
+        <h3>Answer:</h3>
+        <div>
+            <table id="result-table">
+                <tr>
+                    {% for col in answer[0] %}
+                        <th>{{ col }}</th>
+                    {% endfor %}
+                </tr>
+                {% for row in answer[1:] %}
+                    <tr>
+                    {% for cell in row %}
+                        <td>{{ cell }}</td>
+                    {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+        <div style="margin-top: 30px; display: flex; align-items: flex-start; gap: 40px;">
+            <div>
+                <div id="chart-controls" style="display:none; margin-bottom: 20px;">
+                    <label for="x-col">X (Labels):</label>
+                    <select id="x-col"></select>
+                    <label for="y-col">Y (Values):</label>
+                    <select id="y-col"></select>
+                    <label><input type="checkbox" id="multi-series" onchange="updateChartControls()"> Plot all numeric columns</label>
+                    <button onclick="showChart('bar')">Bar Graph</button>
+                    <button onclick="showChart('pie')">Pie Chart</button>
+                    <button onclick="showChart('line')">Line Chart</button>
+                </div>
+                <div style="width: 600px; height: 400px;">
+                    <canvas id="resultChart"></canvas>
+                </div>
+            </div>
+        </div>
+        {% if ai_insight %}
+            <div style="margin-top: 20px;">
+                <h3>AI Insight: <span style='font-size:1.2em;' title='AI-generated'>&#129302;</span></h3>
+                <div style="background: #f6f6f6; border: 1px solid #ccc; padding: 12px; border-radius: 6px;">{{ ai_insight }}</div>
+            </div>
+        {% endif %}
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+        let chartInstance = null;
+        // Highlight referenced value in table
+        {% if ai_highlight %}
+        window.addEventListener('DOMContentLoaded', function() {
+            const table = document.getElementById('result-table');
+            if (table) {
+                for (let i = 1; i < table.rows.length; i++) {
+                    for (let j = 0; j < table.rows[i].cells.length; j++) {
+                        if (table.rows[i].cells[j].innerText.trim() === "{{ ai_highlight }}") {
+                            table.rows[i].cells[j].style.background = '#ffe066';
+                            table.rows[i].cells[j].style.fontWeight = 'bold';
+                        }
+                    }
+                }
+            }
+        });
+        {% endif %}
+            }
+            return true;
+        }
+        function populateDropdowns() {
+            const table = document.getElementById('result-table');
+            const headerCells = table.rows[0].cells;
+            const xCol = document.getElementById('x-col');
+            const yCol = document.getElementById('y-col');
+            xCol.innerHTML = '';
+            yCol.innerHTML = '';
+            for (let i = 0; i < headerCells.length; i++) {
+                const optionX = document.createElement('option');
+                optionX.value = i;
+                optionX.text = headerCells[i].innerText;
+                xCol.appendChild(optionX);
+                const optionY = document.createElement('option');
+                optionY.value = i;
+                optionY.text = headerCells[i].innerText;
+                yCol.appendChild(optionY);
+            }
+            // Default: first column for X, first numeric column for Y
+            xCol.selectedIndex = 0;
+            for (let i = 1; i < headerCells.length; i++) {
+                if (isNumericColumn(i)) {
+                    yCol.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        function getTableData(xIdx, yIdx, multiSeries) {
+            const table = document.getElementById('result-table');
+            const labels = [];
+            const data = [];
+            if (!multiSeries) {
+                for (let i = 1; i < table.rows.length; i++) {
+                    labels.push(table.rows[i].cells[xIdx].innerText);
+                    data.push(Number(table.rows[i].cells[yIdx].innerText) || 0);
+                }
+                return { labels, datasets: [{ label: table.rows[0].cells[yIdx].innerText, data }] };
+            } else {
+                // Multi-series: all numeric columns except X
+                for (let i = 1; i < table.rows.length; i++) {
+                    labels.push(table.rows[i].cells[xIdx].innerText);
+                }
+                const datasets = [];
+                const tableHeader = table.rows[0];
+                for (let col = 0; col < tableHeader.cells.length; col++) {
+                    if (col == xIdx) continue;
+                    if (isNumericColumn(col)) {
+                        const seriesData = [];
+                        for (let i = 1; i < table.rows.length; i++) {
+                            seriesData.push(Number(table.rows[i].cells[col].innerText) || 0);
+                        }
+                        datasets.push({
+                            label: tableHeader.cells[col].innerText,
+                            data: seriesData,
+                            borderWidth: 2,
+                            fill: false
+                        });
+                    }
+                }
+                return { labels, datasets };
+            }
+        }
+        function showChart(type) {
+            const xIdx = document.getElementById('x-col').value;
+            const yIdx = document.getElementById('y-col').value;
+            const multiSeries = document.getElementById('multi-series').checked;
+            const ctx = document.getElementById('resultChart').getContext('2d');
+            const { labels, datasets } = getTableData(xIdx, yIdx, multiSeries);
+            if(chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: datasets.map((ds, i) => {
+                        let backgroundColor, borderColor;
+                        const paletteBg = [
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(153, 102, 255, 0.2)',
+                            'rgba(255, 159, 64, 0.2)'
+                        ];
+                        const paletteBorder = [
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
+                        ];
+                        if (type === 'pie' || (type !== 'pie' && datasets.length === 1)) {
+                            backgroundColor = labels.map((_, j) => paletteBg[j % paletteBg.length]);
+                            borderColor = labels.map((_, j) => paletteBorder[j % paletteBorder.length]);
+                        } else {
+                            backgroundColor = paletteBg[i % paletteBg.length];
+                            borderColor = paletteBorder[i % paletteBorder.length];
+                        }
+                        return Object.assign({}, ds, { backgroundColor, borderColor });
+                    })
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: type !== 'bar' || multiSeries }
+                    },
+                    scales: type === 'bar' || type === 'line' ? {
+                        y: { beginAtZero: true }
+                    } : {}
+                }
+            });
+        }
+        function updateChartControls() {
+            const table = document.getElementById('result-table');
+            if (table.rows[0].cells.length >= 2) {
+                populateDropdowns();
+                let hasNumeric = false;
+                for (let i = 1; i < table.rows[0].cells.length; i++) {
+                    if (isNumericColumn(i)) { hasNumeric = true; break; }
+                }
+                document.getElementById('chart-controls').style.display = hasNumeric ? '' : 'none';
+            } else {
+                document.getElementById('chart-controls').style.display = 'none';
+            }
+        }
+        window.onload = updateChartControls;
+        </script>
+        {% if ai_x or ai_y or ai_chart %}
+        <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            const table = document.getElementById('result-table');
+            if (table) {
+                const headerCells = table.rows[0].cells;
+                const xCol = document.getElementById('x-col');
+                const yCol = document.getElementById('y-col');
+                {% if ai_x %}
+                for (let i = 0; i < headerCells.length; i++) {
+                    if (headerCells[i].innerText.trim().toLowerCase() === "{{ ai_x|lower }}") xCol.selectedIndex = i;
+                }
+                {% endif %}
+                {% if ai_y %}
+                for (let i = 0; i < headerCells.length; i++) {
+                    if (headerCells[i].innerText.trim().toLowerCase() === "{{ ai_y|lower }}") yCol.selectedIndex = i;
+                }
+                {% endif %}
+                {% if ai_chart %}
+                if (["bar","pie","line"].includes("{{ ai_chart }}")) {
+                    setTimeout(function() { showChart("{{ ai_chart }}"); }, 200);
+                }
+                {% endif %}
+            }
+        });
+        </script>
+        {% endif %}
+    {% endif %}
+    {% if sql_query %}
+        {# SQL query hidden as per user request #}
+    {% endif %}
+    {% if error %}
+        <h3 style="color:red;">Error: {{ error }}</h3>
+    {% endif %}
+</body>
+</html> 
