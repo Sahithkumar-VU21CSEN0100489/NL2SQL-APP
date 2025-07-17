@@ -107,19 +107,19 @@ Only output the SQL query, nothing else. If not possible, output only 'no inform
 def get_ai_insight(columns, rows):
     import re
     if not rows:
-        return {"insight": "No data to analyze.", "chart": None, "highlight": None}
+        return "No data to analyze."
     # Prepare a CSV-like sample for the LLM
     sample = ', '.join(columns) + '\n'
     for row in rows[:20]:
         sample += ', '.join(str(cell) for cell in row) + '\n'
     prompt = f"""
 Given the following table data, provide:
-1. A short, clear insight or interesting observation about the data. If there is nothing notable, say 'No significant insight.'
+1. At least 2-3 detailed, clear, and actionable insights or interesting observations about the data. Include trends, anomalies, comparisons, and possible causes if present. If there is nothing notable, say 'No significant insight.'
 2. If a chart would be useful, recommend the best chart type (bar, pie, line, or none) and the column(s) to use for X and Y axes.
-3. If the insight references a specific value (e.g., a city, department, or date), specify that value for highlighting.
+3. If the insights reference specific values (e.g., a city, department, or date), specify those values for highlighting.
+4. Provide a brief summary and, if possible, a recommendation or next step based on the data.
 
-Respond in this JSON format:
-{{"insight": "...", "chart": "bar|pie|line|none", "x": "column_name", "y": "column_name", "highlight": "value or null"}}
+Respond ONLY with a JSON array of objects, do not include the JSON schema or any example in your response. Only output the JSON array.
 
 Data sample:
 {sample}
@@ -135,9 +135,16 @@ Data sample:
             raw = raw[:-3].strip()
     try:
         result = json.loads(raw)
+        # If result is a list, return the 'insight' from the first item
+        if isinstance(result, list) and result and isinstance(result[0], dict) and 'insight' in result[0]:
+            return result[0]['insight']
+        # If result is a dict, return the 'insight' value
+        if isinstance(result, dict) and 'insight' in result:
+            return result['insight']
+        # Otherwise, return the string representation
+        return str(result)
     except Exception:
-        result = {"insight": raw, "chart": None, "highlight": None}
-    return result
+        return raw
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -166,12 +173,11 @@ def index():
                     answer = [['no information']]
                 else:
                     answer = [columns] + result if columns else result
-                    ai_result = get_ai_insight(columns, result)
-                    ai_insight = ai_result.get("insight")
-                    ai_chart = ai_result.get("chart")
-                    ai_x = ai_result.get("x")
-                    ai_y = ai_result.get("y")
-                    ai_highlight = ai_result.get("highlight")
+                    ai_insight = get_ai_insight(columns, result)
+                    ai_chart = None
+                    ai_x = None
+                    ai_y = None
+                    ai_highlight = None
                 conn.close()
         except Exception as e:
             error = str(e)
