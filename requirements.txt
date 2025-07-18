@@ -3,3 +3,9 @@ google-generativeai
 pandas 
 python-dotenv 
 psycopg2
+statsmodels
+prophet
+scikit-learn
+xgboost
+matplotlib
+flask-cors

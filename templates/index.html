@@ -22,34 +22,34 @@
     <div class="container">
         <div class="main-card bg-white p-4">
             <h2 class="mb-4 text-center">NL2SQL Web Application</h2>
-            <form method="post" class="row g-3 align-items-center form-section">
-                <div class="col-12 col-md-9">
-                    <label class="form-label">Question:</label>
+            <form method="post" class="row align-items-center form-section g-3">
+                <div class="col">
+                    <label class="form-label mb-1">Question:</label>
                     <input type="text" name="question" class="form-control" required value="{{ request.form.get('question', '') }}">
                 </div>
-                <div class="col-12 col-md-3 d-grid">
-                    <button type="submit" class="btn btn-primary">Submit</button>
+                <div class="col-auto pt-4">
+                    <button type="submit" class="btn btn-primary px-4">Submit</button>
                 </div>
             </form>
-            {% if answer %}
+    {% if answer %}
                 <div class="form-section">
                     <div class="section-title">Answer Table</div>
                     <div class="table-responsive">
                         <table id="result-table" class="table table-bordered table-hover align-middle mb-0">
                             <tr class="table-primary">
-                                {% for col in answer[0] %}
-                                    <th>{{ col }}</th>
-                                {% endfor %}
-                            </tr>
-                            {% for row in answer[1:] %}
-                                <tr>
-                                {% for cell in row %}
-                                    <td>{{ cell }}</td>
-                                {% endfor %}
-                                </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
+                    {% for col in answer[0] %}
+                        <th>{{ col }}</th>
+                    {% endfor %}
+                </tr>
+                {% for row in answer[1:] %}
+                    <tr>
+                    {% for cell in row %}
+                        <td>{{ cell }}</td>
+                    {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
                 </div>
                 <div class="form-section row g-4 align-items-start">
                     <div class="col-lg-7">
@@ -69,11 +69,11 @@
                             </div>
                         </div>
                         <div class="bg-light rounded shadow-sm p-3" style="width: 100%; min-height: 420px;">
-                            <canvas id="resultChart"></canvas>
-                        </div>
-                    </div>
+                    <canvas id="resultChart"></canvas>
                 </div>
-                {% if ai_insight %}
+            </div>
+        </div>
+        {% if ai_insight %}
                     <div class="form-section">
                         <div class="section-title">AI Insight <span class="ai-badge" title="AI-generated">&#129302;</span></div>
                         <div class="insight-box">{{ ai_insight }}</div>
@@ -86,16 +86,45 @@
             {% if error %}
                 <div class="form-section">
                     <div class="error-box">Error: {{ error }}</div>
+            </div>
+        {% endif %}
+        </div>
+        <!-- Predictive Analysis Section -->
+        <div class="main-card bg-white p-4 mt-5">
+            <h2 class="mb-4 text-center">Predictive Analysis</h2>
+            <form id="predict-form" class="row align-items-center form-section g-3" onsubmit="event.preventDefault(); runPrediction();">
+                <div class="col">
+                    <label class="form-label mb-1">Predictive Question:</label>
+                    <input type="text" id="predict-question" class="form-control" placeholder="e.g. Forecast sales for next 6 months" required>
                 </div>
-            {% endif %}
+                <div class="col-auto pt-4">
+                    <button type="submit" class="btn btn-success px-4">Predict</button>
+                </div>
+            </form>
+            <div id="predict-error" class="error-box mt-3" style="display:none;"></div>
+            <div id="predict-result" style="display:none;">
+                <div class="form-section">
+                    <div class="section-title">Prediction Chart</div>
+                    <div class="bg-light rounded shadow-sm p-3" style="width: 100%; min-height: 420px;">
+                        <canvas id="predictChart"></canvas>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <div class="section-title">AI Explanation <span class="ai-badge" title="AI-generated">&#129302;</span></div>
+                    <div class="insight-box" id="predict-explanation"></div>
+                </div>
+                <div class="form-section">
+                    <button class="btn btn-outline-secondary" id="download-predict" onclick="downloadPrediction()">Download Results</button>
+                </div>
+            </div>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Existing JS logic for chart/table highlighting and controls remains unchanged -->
     {% if answer %}
-    <script>
-    let chartInstance = null;
+        <script>
+        let chartInstance = null;
     let currentChartType = null;
     function selectChartType(type) {
         currentChartType = type;
@@ -122,21 +151,21 @@
             btnLine.classList.add('btn-info', 'active');
         }
     }
-    {% if ai_highlight %}
-    window.addEventListener('DOMContentLoaded', function() {
-        const table = document.getElementById('result-table');
-        if (table) {
-            for (let i = 1; i < table.rows.length; i++) {
-                for (let j = 0; j < table.rows[i].cells.length; j++) {
-                    if (table.rows[i].cells[j].innerText.trim() === "{{ ai_highlight }}") {
-                        table.rows[i].cells[j].style.background = '#ffe066';
-                        table.rows[i].cells[j].style.fontWeight = 'bold';
+        {% if ai_highlight %}
+        window.addEventListener('DOMContentLoaded', function() {
+            const table = document.getElementById('result-table');
+            if (table) {
+                for (let i = 1; i < table.rows.length; i++) {
+                    for (let j = 0; j < table.rows[i].cells.length; j++) {
+                        if (table.rows[i].cells[j].innerText.trim() === "{{ ai_highlight }}") {
+                            table.rows[i].cells[j].style.background = '#ffe066';
+                            table.rows[i].cells[j].style.fontWeight = 'bold';
+                        }
                     }
                 }
             }
-        }
-    });
-    {% endif %}
+        });
+        {% endif %}
     function isNumericColumn(colIdx) {
         const table = document.getElementById('result-table');
         for (let i = 1; i < table.rows.length; i++) {
@@ -144,168 +173,246 @@
                 const val = table.rows[i].cells[colIdx].innerText;
                 if (val.trim() !== '' && isNaN(Number(val))) return false;
             }
+            }
+            return true;
         }
-        return true;
-    }
-    function populateDropdowns() {
-        const table = document.getElementById('result-table');
-        const headerCells = table.rows[0].cells;
-        const xCol = document.getElementById('x-col');
-        const yCol = document.getElementById('y-col');
-        xCol.innerHTML = '';
-        yCol.innerHTML = '';
-        for (let i = 0; i < headerCells.length; i++) {
-            const optionX = document.createElement('option');
-            optionX.value = i;
-            optionX.text = headerCells[i].innerText;
-            xCol.appendChild(optionX);
-            const optionY = document.createElement('option');
-            optionY.value = i;
-            optionY.text = headerCells[i].innerText;
-            yCol.appendChild(optionY);
-        }
-        // Default: first column for X, first numeric column for Y
-        xCol.selectedIndex = 0;
-        for (let i = 1; i < headerCells.length; i++) {
-            if (isNumericColumn(i)) {
-                yCol.selectedIndex = i;
-                break;
-            }
-        }
-    }
-    function getTableData(xIdx, yIdx, multiSeries) {
-        const table = document.getElementById('result-table');
-        const labels = [];
-        const data = [];
-        if (!multiSeries) {
-            for (let i = 1; i < table.rows.length; i++) {
-                labels.push(table.rows[i].cells[xIdx].innerText);
-                data.push(Number(table.rows[i].cells[yIdx].innerText) || 0);
-            }
-            return { labels, datasets: [{ label: table.rows[0].cells[yIdx].innerText, data }] };
-        } else {
-            // Multi-series: all numeric columns except X
-            for (let i = 1; i < table.rows.length; i++) {
-                labels.push(table.rows[i].cells[xIdx].innerText);
-            }
-            const datasets = [];
-            const tableHeader = table.rows[0];
-            for (let col = 0; col < tableHeader.cells.length; col++) {
-                if (col == xIdx) continue;
-                if (isNumericColumn(col)) {
-                    const seriesData = [];
-                    for (let i = 1; i < table.rows.length; i++) {
-                        seriesData.push(Number(table.rows[i].cells[col].innerText) || 0);
-                    }
-                    datasets.push({
-                        label: tableHeader.cells[col].innerText,
-                        data: seriesData,
-                        borderWidth: 2,
-                        fill: false
-                    });
-                }
-            }
-            return { labels, datasets };
-        }
-    }
-    function showChart(type) {
-        const xIdx = document.getElementById('x-col').value;
-        const yIdx = document.getElementById('y-col').value;
-        const multiSeries = document.getElementById('multi-series').checked;
-        const ctx = document.getElementById('resultChart').getContext('2d');
-        const { labels, datasets } = getTableData(xIdx, yIdx, multiSeries);
-        if(chartInstance) chartInstance.destroy();
-        chartInstance = new Chart(ctx, {
-            type: type,
-            data: {
-                labels: labels,
-                datasets: datasets.map((ds, i) => {
-                    let backgroundColor, borderColor;
-                    const paletteBg = [
-                        'rgba(75, 192, 192, 0.2)',
-                        'rgba(255, 99, 132, 0.2)',
-                        'rgba(255, 206, 86, 0.2)',
-                        'rgba(54, 162, 235, 0.2)',
-                        'rgba(153, 102, 255, 0.2)',
-                        'rgba(255, 159, 64, 0.2)'
-                    ];
-                    const paletteBorder = [
-                        'rgba(75, 192, 192, 1)',
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(255, 206, 86, 1)',
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(153, 102, 255, 1)',
-                        'rgba(255, 159, 64, 1)'
-                    ];
-                    if (type === 'pie' || (type !== 'pie' && datasets.length === 1)) {
-                        backgroundColor = labels.map((_, j) => paletteBg[j % paletteBg.length]);
-                        borderColor = labels.map((_, j) => paletteBorder[j % paletteBorder.length]);
-                    } else {
-                        backgroundColor = paletteBg[i % paletteBg.length];
-                        borderColor = paletteBorder[i % paletteBorder.length];
-                    }
-                    return Object.assign({}, ds, { backgroundColor, borderColor });
-                })
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: type !== 'bar' || multiSeries }
-                },
-                scales: type === 'bar' || type === 'line' ? {
-                    y: { beginAtZero: true }
-                } : {}
-            }
-        });
-    }
-    function updateChartControls() {
-        const table = document.getElementById('result-table');
-        if (table && table.rows[0].cells.length >= 2) {
-            populateDropdowns();
-            let hasNumeric = false;
-            for (let i = 1; i < table.rows[0].cells.length; i++) {
-                if (isNumericColumn(i)) { hasNumeric = true; break; }
-            }
-            document.getElementById('chart-controls').style.display = hasNumeric ? '' : 'none';
-        } else {
-            document.getElementById('chart-controls').style.display = 'none';
-        }
-    }
-    window.onload = updateChartControls;
-    </script>
-    {% if ai_x or ai_y or ai_chart %}
-    <script>
-    window.addEventListener('DOMContentLoaded', function() {
-        const table = document.getElementById('result-table');
-        if (table) {
+        function populateDropdowns() {
+            const table = document.getElementById('result-table');
             const headerCells = table.rows[0].cells;
             const xCol = document.getElementById('x-col');
             const yCol = document.getElementById('y-col');
+            xCol.innerHTML = '';
+            yCol.innerHTML = '';
+            for (let i = 0; i < headerCells.length; i++) {
+                const optionX = document.createElement('option');
+                optionX.value = i;
+                optionX.text = headerCells[i].innerText;
+                xCol.appendChild(optionX);
+                const optionY = document.createElement('option');
+                optionY.value = i;
+                optionY.text = headerCells[i].innerText;
+                yCol.appendChild(optionY);
+            }
+            // Default: first column for X, first numeric column for Y
+            xCol.selectedIndex = 0;
+            for (let i = 1; i < headerCells.length; i++) {
+                if (isNumericColumn(i)) {
+                    yCol.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        function getTableData(xIdx, yIdx, multiSeries) {
+            const table = document.getElementById('result-table');
+            const labels = [];
+            const data = [];
+            if (!multiSeries) {
+                for (let i = 1; i < table.rows.length; i++) {
+                    labels.push(table.rows[i].cells[xIdx].innerText);
+                    data.push(Number(table.rows[i].cells[yIdx].innerText) || 0);
+                }
+                return { labels, datasets: [{ label: table.rows[0].cells[yIdx].innerText, data }] };
+            } else {
+                // Multi-series: all numeric columns except X
+                for (let i = 1; i < table.rows.length; i++) {
+                    labels.push(table.rows[i].cells[xIdx].innerText);
+                }
+                const datasets = [];
+                const tableHeader = table.rows[0];
+                for (let col = 0; col < tableHeader.cells.length; col++) {
+                    if (col == xIdx) continue;
+                    if (isNumericColumn(col)) {
+                        const seriesData = [];
+                        for (let i = 1; i < table.rows.length; i++) {
+                            seriesData.push(Number(table.rows[i].cells[col].innerText) || 0);
+                        }
+                        datasets.push({
+                            label: tableHeader.cells[col].innerText,
+                            data: seriesData,
+                            borderWidth: 2,
+                            fill: false
+                        });
+                    }
+                }
+                return { labels, datasets };
+            }
+        }
+        function showChart(type) {
+            const xIdx = document.getElementById('x-col').value;
+            const yIdx = document.getElementById('y-col').value;
+            const multiSeries = document.getElementById('multi-series').checked;
+            const ctx = document.getElementById('resultChart').getContext('2d');
+            const { labels, datasets } = getTableData(xIdx, yIdx, multiSeries);
+            if(chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: datasets.map((ds, i) => {
+                        let backgroundColor, borderColor;
+                        const paletteBg = [
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(153, 102, 255, 0.2)',
+                            'rgba(255, 159, 64, 0.2)'
+                        ];
+                        const paletteBorder = [
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
+                        ];
+                        if (type === 'pie' || (type !== 'pie' && datasets.length === 1)) {
+                            backgroundColor = labels.map((_, j) => paletteBg[j % paletteBg.length]);
+                            borderColor = labels.map((_, j) => paletteBorder[j % paletteBorder.length]);
+                        } else {
+                            backgroundColor = paletteBg[i % paletteBg.length];
+                            borderColor = paletteBorder[i % paletteBorder.length];
+                        }
+                        return Object.assign({}, ds, { backgroundColor, borderColor });
+                    })
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: type !== 'bar' || multiSeries }
+                    },
+                    scales: type === 'bar' || type === 'line' ? {
+                        y: { beginAtZero: true }
+                    } : {}
+                }
+            });
+        }
+        function updateChartControls() {
+            const table = document.getElementById('result-table');
+        if (table && table.rows[0].cells.length >= 2) {
+                populateDropdowns();
+                let hasNumeric = false;
+                for (let i = 1; i < table.rows[0].cells.length; i++) {
+                    if (isNumericColumn(i)) { hasNumeric = true; break; }
+                }
+                document.getElementById('chart-controls').style.display = hasNumeric ? '' : 'none';
+            } else {
+                document.getElementById('chart-controls').style.display = 'none';
+            }
+        }
+        window.onload = updateChartControls;
+        </script>
+        {% if ai_x or ai_y or ai_chart %}
+        <script>
+        window.addEventListener('DOMContentLoaded', function() {
+            const table = document.getElementById('result-table');
+            if (table) {
+                const headerCells = table.rows[0].cells;
+                const xCol = document.getElementById('x-col');
+                const yCol = document.getElementById('y-col');
             // Set xCol if ai_x is provided
-            {% if ai_x %}
+                {% if ai_x %}
             let aiX = "{{ ai_x|lower }}";
-            for (let i = 0; i < headerCells.length; i++) {
+                for (let i = 0; i < headerCells.length; i++) {
                 if (headerCells[i].innerText.trim().toLowerCase() === aiX) { xCol.selectedIndex = i; }
-            }
-            {% endif %}
+                }
+                {% endif %}
             // Set yCol if ai_y is provided
-            {% if ai_y %}
+                {% if ai_y %}
             let aiY = "{{ ai_y|lower }}";
-            for (let i = 0; i < headerCells.length; i++) {
+                for (let i = 0; i < headerCells.length; i++) {
                 if (headerCells[i].innerText.trim().toLowerCase() === aiY) { yCol.selectedIndex = i; }
-            }
-            {% endif %}
+                }
+                {% endif %}
             // Show chart if ai_chart is provided
-            {% if ai_chart %}
+                {% if ai_chart %}
             let aiChart = "{{ ai_chart }}";
             if (["bar","pie","line"].includes(aiChart)) {
                 setTimeout(function() { selectChartType(aiChart); }, 200);
+                }
+                {% endif %}
             }
-            {% endif %}
-        }
-    });
+        });
+        </script>
+        {% endif %}
+    {% endif %}
+    <script>
+    // Predictive Analysis Logic
+    let predictChartInstance = null;
+    function runPrediction() {
+        const question = document.getElementById('predict-question').value;
+        document.getElementById('predict-error').style.display = 'none';
+        document.getElementById('predict-result').style.display = 'none';
+        fetch('/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('predict-error').innerText = data.error;
+                document.getElementById('predict-error').style.display = '';
+                return;
+            }
+            // Show the AI explanation (summary)
+            document.getElementById('predict-explanation').innerText = data.summary || 'No prediction returned.';
+            document.getElementById('predict-result').style.display = '';
+            // Render chart if chart_data is present and non-empty
+            const chartSection = document.querySelector('.section-title');
+            const chartArea = document.querySelector('.bg-light.rounded.shadow-sm.p-3');
+            if (data.chart_data && data.chart_data.length > 0) {
+                chartSection.style.display = '';
+                chartArea.style.display = '';
+                const ctx = document.getElementById('predictChart').getContext('2d');
+                if (predictChartInstance) predictChartInstance.destroy();
+                // Use chart_type from backend, fallback to line
+                let chartType = (data.chart_type || 'line').toLowerCase();
+                let labels = [];
+                let values = [];
+                if ('date' in data.chart_data[0]) {
+                    labels = data.chart_data.map(x => x.date);
+                    values = data.chart_data.map(x => x.value);
+                } else if ('label' in data.chart_data[0]) {
+                    labels = data.chart_data.map(x => x.label);
+                    values = data.chart_data.map(x => x.value);
+                } else {
+                    labels = data.chart_data.map((_, i) => i+1);
+                    values = data.chart_data.map(x => x.value || x);
+                }
+                let chartConfig = {
+                    type: chartType,
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Prediction',
+                            data: values,
+                            borderColor: '#0d6efd',
+                            backgroundColor: chartType === 'pie' ? labels.map((_, j) => `rgba(${75+j*30}, ${192-j*20}, ${192-j*10}, 0.5)`) : 'rgba(13,110,253,0.1)',
+                            fill: chartType === 'line'
+                        }]
+                    },
+                    options: { responsive: true, plugins: { legend: { display: true } } }
+                };
+                if (chartType === 'pie') {
+                    chartConfig.data.datasets[0].backgroundColor = labels.map((_, j) => `rgba(${75+j*30}, ${192-j*20}, ${192-j*10}, 0.5)`);
+                    chartConfig.data.datasets[0].borderColor = labels.map((_, j) => `rgba(${75+j*30}, ${192-j*20}, ${192-j*10}, 1)`);
+                }
+                predictChartInstance = new Chart(ctx, chartConfig);
+            } else {
+                chartSection.style.display = 'none';
+                chartArea.style.display = 'none';
+            }
+        })
+        .catch(e => {
+            document.getElementById('predict-error').innerText = 'Prediction failed.';
+            document.getElementById('predict-error').style.display = '';
+        });
+    }
+    function downloadPrediction() {
+        // No CSV to download in LLM-only mode
+        alert('No tabular prediction results to download.');
+    }
     </script>
-    {% endif %}
-    {% endif %}
 </body>
 </html> 
