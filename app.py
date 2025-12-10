@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from flask_cors import CORS
 from prophet import Prophet
 from sklearn.linear_model import LinearRegression
-import numpy as np
+import numpy as np  
 import matplotlib.pyplot as plt
 
 # Load environment variables from .env file
